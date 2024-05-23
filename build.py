@@ -75,9 +75,7 @@ def calculate_sha256(file_path: str) -> str:
     return sha256_hash.hexdigest()
 
 
-def main() -> int:
-    logging.basicConfig(format="[%(name)s] %(levelname)s: %(message)s", level=logging.INFO)
-
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -95,7 +93,13 @@ def main() -> int:
         action="store_true",
     )
 
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main() -> int:
+    logging.basicConfig(format="[%(name)s] %(levelname)s: %(message)s", level=logging.INFO)
+
+    args = parse_args()
 
     build_directory = "/tmp/building"
     binary_cache = "/tmp/binary_cache"
