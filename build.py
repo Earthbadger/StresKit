@@ -12,20 +12,20 @@ from glob import glob
 
 import requests
 
-logger = logging.getLogger("CLI")
+LOG_CLI = logging.getLogger("CLI")
 
 
 def dl_file(url: str, outfile: str) -> int:
     if os.path.exists(outfile):
-        logger.info("cached binary %s found... skipping download", outfile)
+        LOG_CLI.info("cached binary %s found... skipping download", outfile)
         return 0
 
-    logger.info("downloading %s to %s", url, outfile)
+    LOG_CLI.info("downloading %s to %s", url, outfile)
 
     response = requests.get(url, timeout=5)
 
     if not response.ok:
-        logger.error("response failed with status code %d - %s", response.status_code, response.text)
+        LOG_CLI.error("response failed with status code %d - %s", response.status_code, response.text)
         return 1
 
     with open(outfile, "wb") as fp:
@@ -35,7 +35,7 @@ def dl_file(url: str, outfile: str) -> int:
 
 
 def patch_linpack(bin_path: str) -> int:
-    logger.info("patching linpack binary located in %s", bin_path)
+    LOG_CLI.info("patching linpack binary located in %s", bin_path)
 
     with open(bin_path, "rb") as file:
         file_bytes = file.read()
@@ -48,7 +48,7 @@ def patch_linpack(bin_path: str) -> int:
         (match.start(), match.group()) for match in re.finditer("e8f230", file_hex_string) if match.start() % 2 == 0
     ]
 
-    logger.debug("matches: %i", len(matches))
+    LOG_CLI.debug("matches: %i", len(matches))
 
     # there should be one and only one match else quit
     if len(matches) != 1:
@@ -106,18 +106,18 @@ def main() -> int:
 
     if args.clear_binary_cache:
         if os.path.exists(binary_cache):
-            logger.info("clearing binary cache")
+            LOG_CLI.info("clearing binary cache")
             shutil.rmtree(binary_cache)
         else:
-            logger.info("binary cache folder not found... continuing")
+            LOG_CLI.info("binary cache folder not found... continuing")
 
-    logger.info("reading urls.json")
+    LOG_CLI.info("reading urls.json")
 
     with open("urls.json", encoding="utf-8") as fp:
         urls = json.load(fp)
 
     # make temp folder for building and cache
-    logger.info("creating temp folder %s", build_directory)
+    LOG_CLI.info("creating temp folder %s", build_directory)
     os.makedirs(build_directory)
     os.makedirs(binary_cache, exist_ok=True)
 
@@ -149,7 +149,7 @@ def main() -> int:
             check=True,
         )
     except subprocess.CalledProcessError as e:
-        logger.exception("failed to extract %s, %s", porteus_iso, e)
+        LOG_CLI.exception("failed to extract %s, %s", porteus_iso, e)
         return 1
 
     # ===========================
@@ -157,16 +157,16 @@ def main() -> int:
     # ===========================
 
     # merge custom files with extracted iso
-    logger.info("merging custom files with extracted ISO")
+    LOG_CLI.info("merging custom files with extracted ISO")
     shutil.copytree("porteus", iso_contents, dirs_exist_ok=True)
 
     tools_folder = os.path.join(iso_contents, "porteus", "rootcopy", "usr", "local", "tools")
-    logger.debug("tools folder: %s", tools_folder)
+    LOG_CLI.debug("tools folder: %s", tools_folder)
 
     # =============
     # Setup Linpack
     # =============
-    logger.info("setting up Linpack")
+    LOG_CLI.info("setting up Linpack")
 
     linpack_tgz = os.path.join(binary_cache, "linpack.tgz")
 
@@ -181,7 +181,7 @@ def main() -> int:
     # find benchmarks folder as the folder name (e.g. "benchmarks_2024.0") is dynamic
     benchmarks_folder = glob(os.path.join(linpack_contents, "benchmarks*"))
 
-    logger.debug("benchmarks folder glob result: %s", benchmarks_folder)
+    LOG_CLI.debug("benchmarks folder glob result: %s", benchmarks_folder)
 
     if len(benchmarks_folder) != 1:
         return 1
@@ -197,7 +197,7 @@ def main() -> int:
     # =============
     # Setup Prime95
     # =============
-    logger.info("setting up Prime95")
+    LOG_CLI.info("setting up Prime95")
 
     prime95_tgz = os.path.join(binary_cache, "prime95.tgz")
 
@@ -210,7 +210,7 @@ def main() -> int:
     # ================
     # Setup y-cruncher
     # ================
-    logger.info("setting up y-cruncher")
+    LOG_CLI.info("setting up y-cruncher")
 
     ycruncher_txz = os.path.join(binary_cache, "ycruncher.tar.xz")
 
@@ -225,7 +225,7 @@ def main() -> int:
     # version name changes in folder name (e.g. "y-cruncher v0.8.3.9533")
     ycruncher_folder = glob(os.path.join(ycruncher_contents, "y-cruncher*-static"))
 
-    logger.debug("ycruncher folder folder glob result: %s", ycruncher_folder)
+    LOG_CLI.debug("ycruncher folder folder glob result: %s", ycruncher_folder)
 
     if len(ycruncher_folder) != 1:
         return 1
@@ -238,7 +238,7 @@ def main() -> int:
     # ==================================
     # Setup Intel Memory Latency Checker
     # ==================================
-    logger.info("setting up Intel Memory Latency Checker")
+    LOG_CLI.info("setting up Intel Memory Latency Checker")
 
     mlc_tgz = os.path.join(binary_cache, "mlc.tgz")
 
@@ -255,7 +255,7 @@ def main() -> int:
     # ==========================
     # Setup stressapptest (GSAT)
     # ==========================
-    logger.info("setting up stressapptest (GSAT)")
+    LOG_CLI.info("setting up stressapptest (GSAT)")
 
     stressapptest_zip = os.path.join(binary_cache, "stressapptest.zip")
 
@@ -270,7 +270,7 @@ def main() -> int:
             check=True,
         )
     except subprocess.CalledProcessError as e:
-        logger.exception("failed to extract %s, %s", stressapptest_zip, e)
+        LOG_CLI.exception("failed to extract %s, %s", stressapptest_zip, e)
         return 1
 
     stressapptest_master = os.path.join(stressapptest_contents, "stressapptest-master")
@@ -282,7 +282,7 @@ def main() -> int:
             cwd=stressapptest_master,
         )
     except subprocess.CalledProcessError as e:
-        logger.exception("failed to execute configure script, %s", e)
+        LOG_CLI.exception("failed to execute configure script, %s", e)
         return 1
 
     try:
@@ -292,7 +292,7 @@ def main() -> int:
             cwd=stressapptest_master,
         )
     except subprocess.CalledProcessError as e:
-        logger.exception("failed to run make %s", e)
+        LOG_CLI.exception("failed to run make %s", e)
         return 1
 
     shutil.move(os.path.join(stressapptest_master, "src", "stressapptest"), tools_folder)
@@ -300,7 +300,7 @@ def main() -> int:
     # ===========
     # Setup s-tui
     # ===========
-    logger.info("setting up s-tui")
+    LOG_CLI.info("setting up s-tui")
 
     stui_zip = os.path.join(binary_cache, "s-tui.zip")
 
@@ -315,7 +315,7 @@ def main() -> int:
             check=True,
         )
     except subprocess.CalledProcessError as e:
-        logger.exception("failed to extract %s, %s", stui_zip, e)
+        LOG_CLI.exception("failed to extract %s, %s", stui_zip, e)
         return 1
 
     stui_master = os.path.join(stui_contents, "s-tui-master")
@@ -327,7 +327,7 @@ def main() -> int:
             cwd=stui_master,
         )
     except subprocess.CalledProcessError as e:
-        logger.exception("failed to run make %s", e)
+        LOG_CLI.exception("failed to run make %s", e)
 
         # there is an undefined rule in the makefile which results in a non-zero exit code
         # but the build doesn't fail so there is no need to return
@@ -339,7 +339,7 @@ def main() -> int:
     # =================
     # Setup FIRESTARTER
     # =================
-    logger.info("setting up FIRESTARTER")
+    LOG_CLI.info("setting up FIRESTARTER")
 
     firestarter_tgz = os.path.join(binary_cache, "firestarter.tgz")
 
@@ -356,7 +356,7 @@ def main() -> int:
     # =====================
     # Pack ISO and clean up
     # =====================
-    logger.info("packing ISO and clean up")
+    LOG_CLI.info("packing ISO and clean up")
 
     iso_fname = f"StresKit-v{args.image_version}-x86_64.iso"
     stresskit_iso = os.path.join(os.path.dirname(os.path.abspath(__file__)), iso_fname)
@@ -372,7 +372,7 @@ def main() -> int:
             check=True,
         )
     except subprocess.CalledProcessError as e:
-        logger.exception("failed to extract %s, %s", porteus_iso, e)
+        LOG_CLI.exception("failed to extract %s, %s", porteus_iso, e)
         return 1
 
     shutil.rmtree(build_directory)
